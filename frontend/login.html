@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <div><b>Library Management</b></div>
+  <nav id="nav"></nav>
+  <div id="authBox"></div>
+</header>
+<main>
+
+<div class="card">
+  <h2>Login</h2>
+  <label>Email</label>
+  <input id="email" placeholder="email@example.com" />
+  <label>Password</label>
+  <input id="password" type="password" placeholder="password" />
+  <button id="btn">Login</button>
+  <div id="msg" class="small"></div>
+</div>
+
+</main>
+<script src="common.js"></script>
+
+<script>
+document.getElementById("btn").onclick = async () => {
+  try {
+    const data = await api("/api/auth/login", {
+      method:"POST",
+      body: { email: email.value, password: password.value }
+    });
+    setToken(data.token);
+    setUser(data.user);
+    location.href = "books.html";
+  } catch(e) {
+    document.getElementById("msg").textContent = e.message;
+  }
+};
+</script>
+
+</body>
+</html>

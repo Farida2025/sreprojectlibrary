@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <div><b>Library Management</b></div>
+  <nav id="nav"></nav>
+  <div id="authBox"></div>
+</header>
+<main>
+
+<div class="card">
+  <h2>Analytics (Admin)</h2>
+  <p class="small">These endpoints use aggregation pipelines. Admin token required.</p>
+
+  <button id="loadBtn">Load analytics</button>
+  <div class="row">
+    <div class="card" style="flex:1;">
+      <h3>Top Books</h3>
+      <div id="topBooks"></div>
+    </div>
+    <div class="card" style="flex:1;">
+      <h3>Top Authors</h3>
+      <div id="topAuthors"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Top Categories</h3>
+    <div id="topCategories"></div>
+  </div>
+
+  <div id="msg" class="small"></div>
+</div>
+
+</main>
+<script src="common.js"></script>
+
+<script>
+const msg = document.getElementById("msg");
+const u = getUser();
+
+if (!u || !getToken() || u.role !== "admin") {
+  msg.textContent = "Admin access only";
+}
+
+function renderTable(el, rows, cols) {
+  if (!rows || rows.length === 0) {
+    el.innerHTML = "<div class='small'>No data</div>";
+    return;
+  }
+  let html = "<table><thead><tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr></thead><tbody>";
+  rows.forEach(r => {
+    html += "<tr>" + cols.map(c => `<td>${r[c]}</td>`).join("") + "</tr>";
+  });
+  html += "</tbody></table>";
+  el.innerHTML = html;
+}
+
+document.getElementById("loadBtn").onclick = async () => {
+  msg.textContent = "";
+
+  if (!u || !getToken() || u.role !== "admin") {
+    msg.textContent = "Admin access only";
+    return;
+  }
+
+  try {
+    const [books, authors, cats] = await Promise.all([
+      api("/api/analytics/top-books", { auth:true }),
+      api("/api/analytics/top-authors", { auth:true }),
+      api("/api/analytics/top-categories", { auth:true })
+    ]);
+
+    renderTable(document.getElementById("topBooks"),
+      books.map(x => ({ title: x.title, author: x.author, count: x.count })),
+      ["title","author","count"]
+    );
+
+    renderTable(document.getElementById("topAuthors"), authors, ["author","count"]);
+    renderTable(document.getElementById("topCategories"), cats, ["category","count"]);
+  } catch(e) {
+    msg.textContent = "Admin login required: " + e.message;
+  }
+};
+</script>
+
+</body>
+</html>

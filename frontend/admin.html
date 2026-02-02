@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <div><b>Library Management</b></div>
+  <nav id="nav"></nav>
+  <div id="authBox"></div>
+</header>
+<main>
+
+<div class="card">
+  <h2>Admin Panel</h2>
+  <p class="small">Manage all users and loans. Only for admin.</p>
+</div>
+
+<div class="grid" style="gap:18px;">
+  <div class="card col-6">
+    <h3>All Users</h3>
+    <div id="usersList"></div>
+  </div>
+  <div class="card col-6">
+    <h3>All Loans</h3>
+    <div id="loansList"></div>
+  </div>
+</div>
+
+</main>
+<script src="common.js"></script>
+<script>
+const u = getUser();
+if (!u || !getToken() || u.role !== "admin") {
+  alert("Admin access only");
+  location.href = "index.html";
+}
+
+
+async function loadUsers() {
+  try {
+    const users = await api("/api/users", { auth:true });
+    let html = `<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead><tbody>`;
+    users.forEach(u => {
+      html += `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.role}</td><td>`;
+      if (u.role !== "admin") {
+        html += `<button class='deleteUserBtn' data-id='${u._id}'>Delete</button>`;
+      }
+      html += `</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    document.getElementById("usersList").innerHTML = html;
+    document.querySelectorAll(".deleteUserBtn").forEach(btn => {
+      btn.onclick = async () => {
+        if (!confirm("Delete this user?")) return;
+        try {
+          await api(`/api/users/${btn.dataset.id}`, { method: "DELETE", auth: true });
+          alert("User deleted");
+          loadUsers();
+        } catch(e) { alert(e.message); }
+      };
+    });
+  } catch(e) {
+    document.getElementById("usersList").innerHTML = `<div class='small'>${e.message}</div>`;
+  }
+}
+
+async function loadLoans() {
+  try {
+    const loans = await api("/api/loans", { auth:true });
+    let html = `<table><thead><tr><th>User</th><th>Book</th><th>Borrowed</th><th>Returned</th><th>Actions</th></tr></thead><tbody>`;
+    loans.forEach(l => {
+      html += `<tr><td>${l.userId?.name || "-"}</td><td>${l.bookId?.title || "-"}</td><td>${new Date(l.borrowedAt).toLocaleString()}</td><td>${l.returnedAt ? new Date(l.returnedAt).toLocaleString() : "<b>NOT YET</b>"}</td><td>`;
+      if (l.returnedAt) {
+        html += `<button class='deleteLoanBtn' data-id='${l._id}'>Delete</button>`;
+      }
+      html += `</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    document.getElementById("loansList").innerHTML = html;
+    document.querySelectorAll(".deleteLoanBtn").forEach(btn => {
+      btn.onclick = async () => {
+        if (!confirm("Delete this loan record?")) return;
+        try {
+          await api(`/api/loans/${btn.dataset.id}`, { method: "DELETE", auth: true });
+          alert("Loan deleted");
+          loadLoans();
+        } catch(e) { alert(e.message); }
+      };
+    });
+  } catch(e) {
+    document.getElementById("loansList").innerHTML = `<div class='small'>${e.message}</div>`;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadUsers();
+  loadLoans();
+});
+</script>
+</body>
+</html>

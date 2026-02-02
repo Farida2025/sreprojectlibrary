@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Books</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <div><b>Library Management</b></div>
+  <nav id="nav"></nav>
+  <div id="authBox"></div>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Books</h2>
+
+    <div class="row">
+      <div>
+        <input id="q" placeholder="Search by title/author" />
+        <button id="searchBtn">Search</button>
+      </div>
+    </div>
+
+    <div id="adminBox" class="card" style="display:none;">
+      <h3>Admin: Add Book</h3>
+      <input id="title" placeholder="Title" />
+      <input id="author" placeholder="Author" />
+      <input id="category" placeholder="Category" />
+      <input id="coverUrl" placeholder="Cover image URL (optional)" />
+      <input id="copies" type="number" placeholder="Available copies" />
+      <button id="addBookBtn">Add</button>
+      <div id="adminMsg" class="small"></div>
+    </div>
+
+    <div id="list"></div>
+  </div>
+</main>
+
+<script src="common.js"></script>
+
+<script>
+function isAdmin() {
+  const u = getUser();
+  return u && u.role === "admin";
+}
+
+function coverHtml(b) {
+  if (b.coverUrl && String(b.coverUrl).trim()) {
+    return `
+      <img
+        src="${b.coverUrl}"
+        alt="${b.title}"
+        style="width:100%; height:220px; object-fit:cover; border-radius:14px; border:1px solid rgba(255,255,255,.10); margin-bottom:10px;"
+        onerror="this.style.display='none';"
+      />
+    `;
+  }
+  const letter = (b.title || "?").slice(0,1).toUpperCase();
+  return `
+    <div style="
+      height:220px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(135deg, rgba(160,82,45,.35), rgba(255,255,255,.06));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:54px;
+      font-weight:900;
+      color: rgba(251,233,231,.85);
+      margin-bottom:10px;">
+      ${letter}
+    </div>
+  `;
+}
+
+async function loadBooks() {
+  const qv = document.getElementById("q").value.trim();
+  const data = await api("/api/books" + (qv ? ("?q=" + encodeURIComponent(qv)) : ""));
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  data.items.forEach(b => {
+    const div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      ${coverHtml(b)}
+      <b>${b.title}</b><br/>
+      <span class="small">${b.author} • ${b.category}</span><br/>
+      Available: <b>${b.availableCopies}</b><br/>
+
+      <div class="row" style="margin-top:10px;">
+        <button data-id="${b._id}" class="borrowBtn">Borrow</button>
+        ${isAdmin() ? `
+          <button data-id="${b._id}" class="editBtn">Edit</button>
+          <button data-id="${b._id}" class="deleteBtn btn-danger">Delete</button>
+        ` : ""}
+      </div>
+
+      <div class="small" style="margin-top:8px;">BookId: ${b._id}</div>
+    `;
+
+    list.appendChild(div);
+  });
+
+  document.querySelectorAll(".borrowBtn").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        await api("/api/loans/borrow", { method:"POST", body: { bookId: btn.dataset.id }, auth:true });
+        alert("Borrowed!");
+        loadBooks();
+      } catch(e) {
+        alert(e.message);
+      }
+    };
+  });
+
+  document.querySelectorAll(".deleteBtn").forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm("Delete this book?")) return;
+      try {
+        await api(`/api/books/${btn.dataset.id}`, { method: "DELETE", auth: true });
+        alert("Book deleted");
+        loadBooks();
+      } catch(e) {
+        alert(e.message);
+      }
+    };
+  });
+
+  document.querySelectorAll(".editBtn").forEach(btn => {
+    btn.onclick = async () => {
+      const book = data.items.find(x => x._id === btn.dataset.id);
+      if (!book) return;
+
+      const title = prompt("Edit title:", book.title);
+      if (title === null) return;
+
+      const author = prompt("Edit author:", book.author);
+      if (author === null) return;
+
+      const category = prompt("Edit category:", book.category);
+      if (category === null) return;
+
+      const coverUrl = prompt("Edit cover URL (optional):", book.coverUrl || "");
+      if (coverUrl === null) return;
+
+      const availableCopies = prompt("Edit available copies:", book.availableCopies);
+      if (availableCopies === null) return;
+
+      try {
+        await api(`/api/books/${book._id}`, {
+          method: "PUT",
+          body: { title, author, category, coverUrl, availableCopies: Number(availableCopies) },
+          auth: true
+        });
+        alert("Book updated");
+        loadBooks();
+      } catch(e) {
+        alert(e.message);
+      }
+    };
+  });
+}
+
+document.getElementById("searchBtn").onclick = loadBooks;
+
+document.addEventListener("DOMContentLoaded", async () => {
+  if (isAdmin()) document.getElementById("adminBox").style.display = "block";
+
+  document.getElementById("addBookBtn").onclick = async () => {
+    const adminMsg = document.getElementById("adminMsg");
+
+    try {
+      const body = {
+        title: document.getElementById("title").value,
+        author: document.getElementById("author").value,
+        category: document.getElementById("category").value,
+        coverUrl: document.getElementById("coverUrl").value,
+        availableCopies: Number(document.getElementById("copies").value || 0)
+      };
+
+      await api("/api/books", { method:"POST", body, auth:true });
+      adminMsg.textContent = "Book created.";
+
+      document.getElementById("title").value = "";
+      document.getElementById("author").value = "";
+      document.getElementById("category").value = "";
+      document.getElementById("coverUrl").value = "";
+      document.getElementById("copies").value = "";
+
+      loadBooks();
+    } catch(e) {
+      adminMsg.textContent = e.message;
+    }
+  };
+
+  await loadBooks();
+});
+</script>
+
+</body>
+</html>

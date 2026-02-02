@@ -1,0 +1,370 @@
+openapi: 3.0.3
+
+info:
+  title: Library Management System API
+  description: >
+    RESTful API for the Library Management System.
+    Developed as a final project for the course "Advanced Databases (NoSQL)".
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Authentication and authorization
+  - name: Books
+    description: Book management
+  - name: Loans
+    description: Borrowing and returning books
+  - name: Analytics
+    description: Aggregation-based analytics
+  - name: Users
+    description: User management (admin)
+
+paths:
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+        '409':
+          description: Email already in use
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Invalid email or password
+
+  /books:
+    get:
+      tags: [Books]
+      summary: Get list of books
+      description: Supports filtering, sorting and pagination
+      parameters:
+        - in: query
+          name: author
+          schema: { type: string }
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: sort
+          schema: { type: string }
+        - in: query
+          name: order
+          schema: { type: string, enum: [asc, desc] }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of books
+
+    post:
+      tags: [Books]
+      summary: Create new book (admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+      responses:
+        '201':
+          description: Book created
+
+  /books/{id}:
+    get:
+      tags: [Books]
+      summary: Get book by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Book found
+        '404':
+          description: Book not found
+
+    put:
+      tags: [Books]
+      summary: Update book (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+      responses:
+        '200':
+          description: Book updated
+
+    delete:
+      tags: [Books]
+      summary: Delete book (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Book deleted
+
+  /books/{id}/tags:
+    post:
+      tags: [Books]
+      summary: Add tag to book (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag:
+                  type: string
+      responses:
+        '200':
+          description: Tag added
+
+    delete:
+      tags: [Books]
+      summary: Remove tag from book (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag:
+                  type: string
+      responses:
+        '200':
+          description: Tag removed
+
+  /loans/borrow:
+    post:
+      tags: [Loans]
+      summary: Borrow book
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookId:
+                  type: string
+      responses:
+        '201':
+          description: Book borrowed
+
+  /loans/return:
+    post:
+      tags: [Loans]
+      summary: Return book
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookId:
+                  type: string
+      responses:
+        '200':
+          description: Book returned
+
+  /loans/my:
+    get:
+      tags: [Loans]
+      summary: Get my loans
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of user loans
+
+  /loans:
+    get:
+      tags: [Loans]
+      summary: Get all loans (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of all loans
+
+  /loans/{id}:
+    delete:
+      tags: [Loans]
+      summary: Delete loan (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Loan deleted
+
+  /analytics/top-books:
+    get:
+      tags: [Analytics]
+      summary: Top borrowed books
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Aggregated top books
+
+  /analytics/top-authors:
+    get:
+      tags: [Analytics]
+      summary: Top authors
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Aggregated top authors
+
+  /analytics/top-categories:
+    get:
+      tags: [Analytics]
+      summary: Top categories
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Aggregated top categories
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Get all users (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of users
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    BookRequest:
+      type: object
+      required: [title, author, category, availableCopies]
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        category:
+          type: string
+        coverUrl:
+          type: string
+        availableCopies:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
