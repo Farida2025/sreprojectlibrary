@@ -6,7 +6,8 @@ on:
       - main
 
 jobs:
-  build-push:
+  build-push-deploy:
+
     runs-on: ubuntu-latest
 
     permissions:
@@ -14,6 +15,7 @@ jobs:
       packages: write
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -37,3 +39,11 @@ jobs:
           context: ./frontend
           push: true
           tags: ghcr.io/farida2025/sreprojectlibrary/library-frontend:latest
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl rollout restart deployment backend
+          kubectl rollout restart deployment frontend
