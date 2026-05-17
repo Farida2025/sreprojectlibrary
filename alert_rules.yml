@@ -1,0 +1,21 @@
+groups:
+  - name: library_alerts
+    rules:
+
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backend is down ({{ $labels.instance }})"
+          description: "Backend service has been unavailable for more than 1 minute."
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[1m]) > 0.5
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is high and may impact system performance."

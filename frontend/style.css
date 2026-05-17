@@ -270,3 +270,8 @@ tr:hover td{ background: rgba(255,255,255,.02); }
   .card{ padding: 14px 8px; }
   table th, table td { padding: 10px 6px; }
 }
+#list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
