@@ -6,7 +6,9 @@ on:
       - main
 
 jobs:
-  build-and-push:
+
+  build-push-deploy:
+
     runs-on: ubuntu-latest
 
     permissions:
@@ -14,6 +16,7 @@ jobs:
       packages: write
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -24,20 +27,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Downcase repository string
-        run: |
-          echo "REPO_LOWERCASE=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
-
       - name: Build backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: true
-          tags: ghcr.io/${{ env.REPO_LOWERCASE }}/library-backend:latest
+          tags: ghcr.io/farida2025/sreprojectlibrary/library-backend:latest
 
       - name: Build frontend image
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
           push: true
-          tags: ghcr.io/${{ env.REPO_LOWERCASE }}/library-frontend:latest
+          tags: ghcr.io/farida2025/sreprojectlibrary/library-frontend:latest
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl rollout restart deployment backend
+          kubectl rollout restart deployment frontend
